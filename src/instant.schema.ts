@@ -13,10 +13,22 @@ const _schema = i.schema({
       imageURL: i.string().optional(),
       type: i.string().optional(),
     }),
-    todos: i.entity({
-      text: i.string(),
-      done: i.boolean(),
-      createdAt: i.number(),
+    wallpapers: i.entity({
+      name: i.string(),
+      description: i.string().optional(),
+      thumbnailUrl: i.string(),
+      fullResUrl: i.string(),
+      order: i.number().indexed(),
+    }),
+    purchases: i.entity({
+      token: i.string().unique().indexed(),
+      email: i.string().indexed(),
+      stripeSessionId: i.string().unique().indexed(),
+      stripePaymentIntentId: i.string().optional(),
+      amount: i.number(),
+      currency: i.string(),
+      status: i.string().indexed(),
+      createdAt: i.number().indexed(),
     }),
   },
   links: {
@@ -33,12 +45,16 @@ const _schema = i.schema({
         label: "linkedGuestUsers",
       },
     },
-  },
-  rooms: {
-    todos: {
-      presence: i.entity({}),
+    wallpaperFile: {
+      forward: { on: "wallpapers", has: "one", label: "file" },
+      reverse: { on: "$files", has: "one", label: "wallpaper" },
+    },
+    purchaseWallpapers: {
+      forward: { on: "purchases", has: "many", label: "wallpapers" },
+      reverse: { on: "wallpapers", has: "many", label: "purchases" },
     },
   },
+  rooms: {},
 });
 
 // This helps TypeScript display nicer intellisense

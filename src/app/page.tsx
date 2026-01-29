@@ -1,169 +1,70 @@
 "use client";
 
+import Link from "next/link";
 import { db } from "@/lib/db";
-import { type AppSchema } from "@/instant.schema";
-import { id, InstaQLEntity } from "@instantdb/react";
+import { WallpaperGrid } from "@/components/WallpaperGrid";
+import { BuyButton } from "@/components/BuyButton";
+import { Spinner, CheckIcon } from "@/components/icons";
+import { usePurchaseToken } from "@/hooks/usePurchaseToken";
 
-type Todo = InstaQLEntity<AppSchema, "todos">;
+export default function Home() {
+  const { token, isLoading: tokenLoading } = usePurchaseToken();
 
-const room = db.room("todos");
+  // Query wallpapers with token - only returns fullResUrl if token is valid
+  const { data, isLoading: queryLoading } = db.useQuery(
+    { wallpapers: { $: { order: { order: "asc" } } } },
+    token ? { ruleParams: { token } } : undefined
+  );
 
-function App() {
-  // Read Data
-  const { isLoading, error, data } = db.useQuery({ todos: {} });
-  const { peers } = db.rooms.usePresence(room);
-  const numUsers = 1 + Object.keys(peers).length;
-  if (isLoading) {
-    return;
-  }
-  if (error) {
-    return <div className="text-red-500 p-4">Error: {error.message}</div>;
-  }
-  const { todos } = data;
+  const wallpapers = data?.wallpapers || [];
+  // Check if any wallpaper has fullResUrl - that's the real proof of purchase
+  const hasPurchase = wallpapers.some((w) => !!w.fullResUrl);
+
+  const isLoading = tokenLoading || queryLoading;
+
   return (
-    <div className="font-mono min-h-screen flex justify-center items-center flex-col space-y-4">
-      <div className="text-xs text-gray-500">
-        Number of users online: {numUsers}
-      </div>
-      <h2 className="tracking-wide text-5xl text-gray-300">todos</h2>
-      <div className="border border-gray-300 max-w-xs w-full">
-        <TodoForm todos={todos} />
-        <TodoList todos={todos} />
-        <ActionBar todos={todos} />
-      </div>
-      <div className="text-xs text-center">
-        Open another tab to see todos update in realtime!
-      </div>
-    </div>
-  );
-}
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-violet-950 to-slate-900">
+      <div className="max-w-6xl mx-auto px-6 py-16">
+        <header className="text-center mb-10">
+          <h1 className="text-5xl font-bold text-white mb-4 tracking-tight">
+            Premium Wallpaper Pack
+          </h1>
+          <p className="text-xl text-violet-200/70 max-w-2xl mx-auto mb-8">
+            9 stunning high-resolution wallpapers to transform your desktop
+          </p>
 
-// Write Data
-// ---------
-function addTodo(text: string) {
-  db.transact(
-    db.tx.todos[id()].update({
-      text,
-      done: false,
-      createdAt: Date.now(),
-    }),
-  );
-}
-
-function deleteTodo(todo: Todo) {
-  db.transact(db.tx.todos[todo.id].delete());
-}
-
-function toggleDone(todo: Todo) {
-  db.transact(db.tx.todos[todo.id].update({ done: !todo.done }));
-}
-
-function deleteCompleted(todos: Todo[]) {
-  const completed = todos.filter((todo) => todo.done);
-  const txs = completed.map((todo) => db.tx.todos[todo.id].delete());
-  db.transact(txs);
-}
-
-function toggleAll(todos: Todo[]) {
-  const newVal = !todos.every((todo) => todo.done);
-  db.transact(
-    todos.map((todo) => db.tx.todos[todo.id].update({ done: newVal })),
-  );
-}
-
-// Components
-// ----------
-function ChevronDownIcon() {
-  return (
-    <svg viewBox="0 0 20 20">
-      <path
-        d="M5 8 L10 13 L15 8"
-        stroke="currentColor"
-        fill="none"
-        strokeWidth="2"
-      />
-    </svg>
-  );
-}
-
-function TodoForm({ todos }: { todos: Todo[] }) {
-  return (
-    <div className="flex items-center h-10 border-b border-gray-300">
-      <button
-        className="h-full px-2 border-r border-gray-300 flex items-center justify-center"
-        onClick={() => toggleAll(todos)}
-      >
-        <div className="w-5 h-5">
-          <ChevronDownIcon />
-        </div>
-      </button>
-      <form
-        className="flex-1 h-full"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const input = e.currentTarget.input as HTMLInputElement;
-          addTodo(input.value);
-          input.value = "";
-        }}
-      >
-        <input
-          className="w-full h-full px-2 outline-none bg-transparent"
-          autoFocus
-          placeholder="What needs to be done?"
-          type="text"
-          name="input"
-        />
-      </form>
-    </div>
-  );
-}
-
-function TodoList({ todos }: { todos: Todo[] }) {
-  return (
-    <div className="divide-y divide-gray-300">
-      {todos.map((todo) => (
-        <div key={todo.id} className="flex items-center h-10">
-          <div className="h-full px-2 flex items-center justify-center">
-            <div className="w-5 h-5 flex items-center justify-center">
-              <input
-                type="checkbox"
-                className="cursor-pointer"
-                checked={todo.done}
-                onChange={() => toggleDone(todo)}
-              />
+          {isLoading ? (
+            <div className="inline-flex items-center gap-3 px-6 py-3 bg-white/5 rounded-xl text-violet-200/70">
+              <Spinner className="h-5 w-5" />
+              Loading...
             </div>
-          </div>
-          <div className="flex-1 px-2 overflow-hidden flex items-center">
-            {todo.done ? (
-              <span className="line-through">{todo.text}</span>
-            ) : (
-              <span>{todo.text}</span>
-            )}
-          </div>
-          <button
-            className="h-full px-2 flex items-center justify-center text-gray-300 hover:text-gray-500"
-            onClick={() => deleteTodo(todo)}
-          >
-            X
-          </button>
-        </div>
-      ))}
+          ) : hasPurchase ? (
+            <div className="inline-flex items-center gap-3 px-6 py-3 bg-emerald-500/20 rounded-xl border border-emerald-500/30">
+              <div className="w-8 h-8 rounded-full bg-emerald-500/30 flex items-center justify-center">
+                <CheckIcon className="w-5 h-5 text-emerald-400" />
+              </div>
+              <span className="text-emerald-300 font-medium">
+                You own this pack! Hover over any wallpaper to download.
+              </span>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <BuyButton />
+              <p className="text-violet-200/50 text-sm">
+                One-time purchase. Instant download access.
+              </p>
+              <p className="text-violet-200/40 text-sm">
+                Already purchased?{" "}
+                <Link href="/recover" className="text-violet-400 hover:text-violet-300 underline">
+                  Recover your purchase
+                </Link>
+              </p>
+            </div>
+          )}
+        </header>
+
+        <WallpaperGrid wallpapers={wallpapers} isLoading={queryLoading} />
+      </div>
     </div>
   );
 }
-
-function ActionBar({ todos }: { todos: Todo[] }) {
-  return (
-    <div className="flex justify-between items-center h-10 px-2 text-xs border-t border-gray-300">
-      <div>Remaining todos: {todos.filter((todo) => !todo.done).length}</div>
-      <button
-        className=" text-gray-300 hover:text-gray-500"
-        onClick={() => deleteCompleted(todos)}
-      >
-        Delete Completed
-      </button>
-    </div>
-  );
-}
-
-export default App;

@@ -3,22 +3,27 @@
 import type { InstantRules } from "@instantdb/react";
 
 const rules = {
-  /**
-   * Welcome to Instant's permission system!
-   * Right now your rules are empty. To start filling them in, check out the docs:
-   * https://www.instantdb.com/docs/permissions
-   *
-   * Here's an example to give you a feel:
-   * posts: {
-   *   allow: {
-   *     view: "true",
-   *     create: "isOwner",
-   *     update: "isOwner",
-   *     delete: "isOwner",
-   *   },
-   *   bind: ["isOwner", "auth.id != null && auth.id == data.ownerId"],
-   * },
-   */
+  wallpapers: {
+    allow: {
+      view: "true",
+      create: "false",
+      update: "false",
+      delete: "false",
+    },
+    fields: {
+      // Only return fullResUrl if the token matches a linked purchase
+      fullResUrl: "ruleParams.token in data.ref('purchases.token')",
+    },
+  },
+  purchases: {
+    allow: {
+      // Viewable if you know the sessionId OR if authenticated user's email matches
+      view: "data.stripeSessionId == ruleParams.sessionId || data.email == auth.email",
+      create: "false",
+      update: "false",
+      delete: "false",
+    },
+  },
 } satisfies InstantRules;
 
 export default rules;
