@@ -17,8 +17,8 @@ const rules = {
   },
   purchases: {
     allow: {
-      // Viewable if you know the sessionId OR if authenticated user's email matches
-      view: "data.stripeSessionId == ruleParams.sessionId || data.email == auth.email",
+      // Viewable if authenticated user's email matches
+      view: "data.email == auth.email",
       create: "false",
       update: "false",
       delete: "false",
